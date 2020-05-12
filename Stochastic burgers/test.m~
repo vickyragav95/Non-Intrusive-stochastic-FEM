@@ -1,0 +1,81 @@
+clear;
+clc;
+
+% problem parameters
+P = 3; % maximum gPC order
+d = 1; % number of stochastic variable
+M = factorial(P+d)/factorial(P)/factorial(d); %total number of terms in Pascal's simplex
+mu = 0.05;
+nr_limit=100;
+[indx,Ckij] = lexico_table(P,d,1);
+const = zeros(1,M);
+const(1) = 1;% gPC coefficinets for const=1 [1 0 0 ... 0]
+
+q=7;
+% Stochastic BCs
+g1 = 1*const; % deterministic 
+g2 = -g1; % stochastic   
+g1(1) = 1;
+g1(2) = 0.1;
+
+load U100x50.mat;
+U100x50 = U100x50';
+
+source = 0;
+nel = 99;
+y_points = 100;
+yy=linspace(-1,1,y_points);
+nrlimit=100;
+
+% num. of points
+npoints = nel+1;
+
+% domain (starting at x_A and of length L)
+x_A = -1.0;
+L = 2.0;
+x_B = x_A+L;
+
+% mesh spacing
+delx = L/nel;
+
+% mesh points
+for ipoint = 1:npoints
+  xmesh(ipoint) = x_A + (ipoint-1)*delx;
+end
+
+% U100x50 = zeros(y_points,npoints);
+% for i=1:y_points
+%     U100x50(i,:)=linspace(g1(1)+g1(2)*yy(i),g2(1),npoints);
+% end
+lgndmat = zeros(y_points,M);
+for i=1:y_points
+    lgndmat(i,:) = [1,yy(i),-1+1.5*(yy(i))^2,2.5*(yy(i))^3-1.5*(yy(i))];%,(35/8)*(yy(i))^4-(30/8)*(yy(i))^2+3/8];
+end
+guess=zeros(npoints,M);
+for i=1:npoints
+    guess(i,:) = lgndmat\U100x50(:,i);
+end
+
+expec = zeros(1,npoints);
+    for i=1:npoints
+        for J=1:M
+            expec(i) = expec(i)+guess(J,i)*Ckij(1,1,J);
+        end
+    end
+    figure(3);
+    if method==1
+        plot(xmesh,expec,'k-','Linewidth',1.5)
+        hold on
+    else
+        plot(xmesh,expec,'-.r','Linewidth',1)
+    end
+    
+    % variance of u(x,y)
+    var = 0*expec;
+    for i=1:npoints
+        for I=1:M
+            for J=1:M
+                var(i) = var(i) + guess(I,i)*guess(J,i)*(Ckij(1,I,J)-Ckij(1,I,1)*Ckij(1,J,1));
+            end
+        end
+    end
